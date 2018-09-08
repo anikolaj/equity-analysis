@@ -15,6 +15,10 @@ struct EntityInformation{
     double shares_outstanding;
     int current_year;
     int last_quarter;
+
+    // vectors of revenue and expense metrics being tracked for the entity
+    vector<string> other_revenues;
+    vector<string> other_expenses;
 };
 
 struct IncomeStatement{
@@ -33,6 +37,7 @@ struct IncomeStatement{
     double pretax_income;
     double tax_amount;
     double net_income;
+    double shares_outstanding;
     double earnings_per_share;
 };
 
@@ -105,19 +110,14 @@ EntityInformation enter_entity_information() {
     return entityInfo;
 }
 
-// the below method will handle input about the company's income statement
-IncomeStatement enter_income_statement_values(EntityInformation entityInfo) {
-
-    IncomeStatement incomeStatement;
-
-    // enter total revenue
-    cout << "Total revenue: ";
-    cin >> incomeStatement.total_revenue;
+// the below method will handle input other individual revenue metrics
+vector<pair<string, double> > enter_other_revenues() {
 
     // enter any other revenue metrics that you wish to track
     cout << "If you have any revenue metrics you would like to track, please enter them" << endl;
     cout << "Otherwise, type 'done' when you are finished." << endl;
 
+    vector<pair<string, double> > other_revenues;
     string revenue_name;
     double revenue_number;
 
@@ -135,19 +135,21 @@ IncomeStatement enter_income_statement_values(EntityInformation entityInfo) {
         else {
             cout << "Enter revenue value: ";
             cin >> revenue_number;
-            incomeStatement.other_revenues.push_back(make_pair(revenue_name, revenue_number));
+            other_revenues.push_back(make_pair(revenue_name, revenue_number));
         }
     }
     cout << endl;
 
-    // enter total expenses
-    cout << "Total operating expenses: ";
-    cin >> incomeStatement.total_expenses;
+    return other_revenues;
+}
 
+// the below method will handle input other individual expense metrics
+vector<pair<string, double> > enter_other_expenses() {
     // enter any other expense metrics that you wish to track
     cout << "If you have any expense metrics you would like to track, please enter them" << endl;
     cout << "Otherwise, type 'done' when you are finished." << endl;
 
+    vector<pair<string, double> > other_expenses;
     string expense_name;
     double expense_number;
 
@@ -165,10 +167,66 @@ IncomeStatement enter_income_statement_values(EntityInformation entityInfo) {
         else {
             cout << "Enter revenue value: ";
             cin >> expense_number;
-            incomeStatement.other_expenses.push_back(make_pair(expense_name, expense_number));
+            other_expenses.push_back(make_pair(expense_name, expense_number));
         }
     }
     cout << endl;
+
+    return other_expenses;
+}
+
+// the below method will handle input about the company's income statement
+IncomeStatement enter_income_statement_values(EntityInformation & entityInfo, bool first_statement) {
+
+    IncomeStatement incomeStatement;
+
+    // enter total revenue
+    cout << "Total revenue: ";
+    cin >> incomeStatement.total_revenue;
+
+    // check if we need to ask for individual metrics to track
+    if(first_statement == true) {
+        incomeStatement.other_revenues = enter_other_revenues();
+        // probably want to update how we extract revenue names
+        for(int i = 0; i < incomeStatement.other_revenues.size(); ++i) {
+            entityInfo.other_revenues.push_back(incomeStatement.other_revenues[i].first);
+        }
+    }
+    else {
+        cout << "Please enter values for the following metrics" << endl;
+        for(int i = 0; i < entityInfo.other_revenues.size(); ++i) {
+            cout << entityInfo.other_revenues[i] << ": ";
+            double revenue_number;
+            cin >> revenue_number;
+
+            // create pair to add to income statement
+            incomeStatement.other_revenues.push_back(make_pair(entityInfo.other_revenues[i], revenue_number));
+        }
+    }
+
+    // enter total expenses
+    cout << "Total operating expenses: ";
+    cin >> incomeStatement.total_expenses;
+
+    // check if we need to ask for individual metrics to track
+    if(first_statement == true) {
+        incomeStatement.other_expenses = enter_other_expenses();
+        // probably want to update how we extract revenue names
+        for(int i = 0; i < incomeStatement.other_expenses.size(); ++i) {
+            entityInfo.other_expenses.push_back(incomeStatement.other_expenses[i].first);
+        }
+    }
+    else {
+        cout << "Please enter values for the following metrics" << endl;
+        for(int i = 0; i < entityInfo.other_expenses.size(); ++i) {
+            cout << entityInfo.other_expenses[i] << ": ";
+            double expense_number;
+            cin >> expense_number;
+
+            // create pair to add to income statement
+            incomeStatement.other_expenses.push_back(make_pair(entityInfo.other_expenses[i], expense_number));
+        }
+    }
 
     // enter total additional expenses or income
     cout << "Enter total additional income: ";
@@ -189,9 +247,14 @@ IncomeStatement enter_income_statement_values(EntityInformation entityInfo) {
     incomeStatement.net_income = incomeStatement.pretax_income - incomeStatement.tax_amount;
     cout << "Net income: " << incomeStatement.net_income << endl;
 
-    incomeStatement.earnings_per_share = (incomeStatement.net_income * 1000000) / entityInfo.shares_outstanding;
+    cout << "Enter the amount of shares outstanding for this quarter: ";
+    cin >> incomeStatement.shares_outstanding;
+
+    incomeStatement.earnings_per_share = (incomeStatement.net_income ) / incomeStatement.shares_outstanding;
     cout << "Earnings per share: " << setprecision(2) << fixed << incomeStatement.earnings_per_share << endl;
     cout << endl;
+
+    return incomeStatement;
 }
 
 // this method will handle initial call for inputing the income statement
@@ -212,19 +275,22 @@ void enter_income_statement(EntityInformation entityInfo) {
 
     bool additional_statements = true;
 
+    bool first_statement = true;
+
     while(additional_statements == true) {
         cout << "Year: " << year << endl;
         cout << "Quarter: " << period << endl;
         cout << endl;
 
         // get data from income statement current year
-        IncomeStatement current = enter_income_statement_values(entityInfo);
-
+        IncomeStatement current = enter_income_statement_values(entityInfo, first_statement);
+        first_statement = false;
+ 
         // get data from income statement previous year
         cout << "Year: " << year - 1 << endl;
         cout << "Quarter: " << period << endl;
         cout << endl;
-        IncomeStatement previous = enter_income_statement_values(entityInfo);
+        IncomeStatement previous = enter_income_statement_values(entityInfo, first_statement);
 
         // check if the user would like to input more data
         cout << "Would you like to enter another statement (y/n)? ";
